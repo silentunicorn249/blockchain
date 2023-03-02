@@ -25,4 +25,4 @@ for block in chain.chain:
     print(chain.hash(block), end="\n\n")
 
 
-print(chain.is_chain_valid())
+print(chain.is_chain_valid(chain.chain))

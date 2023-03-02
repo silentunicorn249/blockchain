@@ -1,10 +1,13 @@
-import datetime, hashlib, json
+import datetime, hashlib, json, requests
+from urllib.parse import urlparse
 
 
 class Blockchain:
     def __init__(self, pow = 4) -> None:
         self.chain = []
         self.len = 0
+        self.transactions = []
+        self.nodes = set()
         self.create_block(1, '0')
         self.pow = pow
 
@@ -13,10 +16,69 @@ class Blockchain:
                   "proof": proof,
                  "timestamp": str(datetime.datetime.now()),
                   "prev_hash": prev_hash,
+                  "transactions" : self.transactions
                  }
         self.len+=1
         self.chain.append(block)
+        self.transactions = []
+        self.notify_nodes()
+        # print(block)
         return block
+    
+
+    def notify_nodes(self):
+        print("notifing nodes")
+        for node in self.nodes:
+            response = requests.get(f"http://{node}/replace")
+            if response.status_code == 200:
+                result = response.json()
+                message = result["message"]
+                if message == "Different":
+                    print(f"Replaced {node} with current value")
+
+    def add_transaction(self, sender, reciever, amount):
+        self.transactions.append( {
+            "sender": sender,
+            "reciever": reciever,
+            "amount": amount 
+        })
+
+        print("transaction created: ", self.transactions)
+        return self.len + 1
+    
+    def add_node(self, address):
+        self.nodes.add(urlparse(address).netloc)
+
+    def replace_chain(self):
+        network = self.nodes
+        longest_chain = None
+        max_length = len(self.chain)
+        for node in network:
+            try :
+                response = requests.get(f"http://{node}/chain")
+                if response.status_code == 200:
+                    result = response.json()
+                    chain = result["chain"]
+                    # print(chain)
+                    length = result["length"]
+                    valid =  self.is_chain_valid(chain)
+                    # print(length, max_length, valid )
+                    if length > max_length and valid:
+                        print(f"Found chain at {node}")
+                        longest_chain = chain
+                        max_length = length
+            except Exception as e: 
+                print("Error connecting to node, removing it...")
+                self.nodes.discard(node)
+                continue
+           
+
+        if longest_chain:
+            self.len = max_length
+            self.chain = longest_chain
+            return True
+        return False
+
 
     def get_prev_block(self):
         return self.chain[-1]
@@ -28,23 +90,27 @@ class Blockchain:
             hash_op = hashlib.sha256(str(new_proof**2 - prev_proof**2).encode()).hexdigest()
             # print("Trying: ", hash_op)
             if hash_op[:self.pow] == "0"*self.pow:
-                print(f"Found: {hash_op} with nonce: {new_proof}")
+                # print(f"Found: {hash_op} with nonce: {new_proof}")
                 return new_proof
             new_proof+=1
     
     def hash(Self, block) -> str:
-        enc_block = json.dumps(block).encode()
+        enc_block = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(enc_block).hexdigest()
 
-    def is_chain_valid(self) -> bool:
-        prev_block = self.chain[0]
-        for block in self.chain[1:]:
+    def is_chain_valid(self, chain) -> bool:
+        prev_block = chain[0]
+        for block in chain[1:]:
             if block["prev_hash"] != self.hash(prev_block):
+                print("------------Prev hash is invalid------------")
+                print(block["prev_hash"])
+                print(self.hash(prev_block))
                 return False
             prev_proof = prev_block["proof"]
             curr_proof = block["proof"]
             hash_op = hashlib.sha256(str(curr_proof**2 - prev_proof**2).encode()).hexdigest()
             if hash_op[:4] != "0000":
+                print("----------PoW is not Valid----------")
                 return False
             prev_block = block
             
