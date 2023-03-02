@@ -2,7 +2,6 @@ from uuid import uuid4
 from flask import Flask, jsonify, request
 import blockchain
 
-chain = blockchain.Blockchain()
 
 app = Flask(__name__)
 
@@ -10,14 +9,7 @@ node_address = str(uuid4()).replace("-", "")
 
 @app.route('/mine', methods=["GET"])
 def mine():
-    # print(chain)
-    prev_block = chain.get_prev_block()
-    prev_proof = prev_block["proof"]
-    proof = chain.proof_of_work(prev_proof)
-    prev_hash = chain.hash(prev_block)
-    chain.add_transaction(node_address, "Hadelin", 10)
-    # print(chain.transactions)
-    block = chain.create_block(proof, prev_hash)
+    block = chain.mine_block(node_address, "Myself")
     response = {
         "msg": "Success",
         "index": block["index"],
@@ -52,7 +44,7 @@ def is_valid():
 @app.route('/add_transaction', methods=["POST"])
 def add_transaction():
     json = request.get_json()
-    transaction_keys = ["sender", "Reciever", "amount"]
+    transaction_keys = ["sender", "reciever", "amount"]
     if not all( key in json for key in transaction_keys):
         return "Some elements are missing", 400
     
@@ -81,7 +73,6 @@ def add_node():
 
     return jsonify(response), 201
 
-
 @app.route('/replace', methods=["GET"])
 def replace_chain():
     is_chain_replaced = chain.replace_chain()
@@ -93,4 +84,13 @@ def replace_chain():
                     'chain': chain.chain}
     return jsonify(response), 200
 
-# app.run(port=5000 ,debug=True)
+@app.route('/nodes', methods=["GET"])
+def get_nodes():
+    response = {
+        "nodes": list(chain.nodes)
+    }
+    return jsonify(response), 200
+if __name__ == "__main__":
+    port = int(input("Enter port number: "))
+    chain = blockchain.Blockchain(port)
+    app.run(port=port ,debug=False)

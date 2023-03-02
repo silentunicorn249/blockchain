@@ -3,13 +3,23 @@ from urllib.parse import urlparse
 
 
 class Blockchain:
-    def __init__(self, pow = 4) -> None:
+    def __init__(self, port) -> None:
         self.chain = []
+        self.port = port
         self.len = 0
         self.transactions = []
         self.nodes = set()
         self.create_block(1, '0')
-        self.pow = pow
+        self.pow = 4
+    
+    def mine_block(self, node_address, reciever):
+        prev_block = self.get_prev_block()
+        prev_proof = prev_block["proof"]
+        proof = self.proof_of_work(prev_proof)
+        prev_hash = self.hash(prev_block)
+        self.add_transaction(node_address, reciever, 10)
+        block = self.create_block(proof, prev_hash)
+        return block
 
     def create_block(self, proof, prev_hash):
         block = {"index": self.len+1,
@@ -35,6 +45,8 @@ class Blockchain:
                 message = result["message"]
                 if message == "Different":
                     print(f"Replaced {node} with current value")
+                else:
+                    print(f"Could not replace node {node}")
 
     def add_transaction(self, sender, reciever, amount):
         self.transactions.append( {
@@ -46,13 +58,25 @@ class Blockchain:
         print("transaction created: ", self.transactions)
         return self.len + 1
     
-    def add_node(self, address):
-        self.nodes.add(urlparse(address).netloc)
+    def add_node(self, address : str):
+        print(f"{address}")
+        if urlparse(address).netloc not in self.nodes:
+            if address.endswith(str(self.port)):
+                return
+            print(f"adding {address}")
+            self.nodes.add(urlparse(address).netloc)
+            response = requests.post(f"{address}/add_node" , json={
+                "nodes": [f"http://127.0.0.1:{self.port}"]
+            })
+            print(response)
+        print("nodes: ", self.nodes)
+        self.replace_chain()
 
     def replace_chain(self):
         network = self.nodes
         longest_chain = None
         max_length = len(self.chain)
+        nodes_to_remove = []
         for node in network:
             try :
                 response = requests.get(f"http://{node}/chain")
@@ -69,9 +93,11 @@ class Blockchain:
                         max_length = length
             except Exception as e: 
                 print("Error connecting to node, removing it...")
-                self.nodes.discard(node)
+                nodes_to_remove.append(node)
                 continue
-           
+        
+        for node in nodes_to_remove:
+            self.nodes.discard(node)
 
         if longest_chain:
             self.len = max_length
@@ -83,7 +109,6 @@ class Blockchain:
     def get_prev_block(self):
         return self.chain[-1]
 
-    # Create block here then return it
     def proof_of_work(self, prev_proof) -> str:
         new_proof = 1
         while True:
