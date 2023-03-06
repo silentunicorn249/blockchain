@@ -1,6 +1,6 @@
 from uuid import uuid4
 from flask import Flask, jsonify, request
-import blockchain
+import blockchain, requests
 
 
 app = Flask(__name__)
@@ -72,6 +72,28 @@ def add_node():
     }
 
     return jsonify(response), 201
+
+# @app.route('/discover', methods=["POST"])
+# def discover():
+#     json = request.get_json()
+#     sender = json.get('sender')
+    
+#     nodes = chain.discover_nodes(sender)
+    
+#     response = {
+#         "message": "Success",
+#         "nodes": list(nodes)
+#     }
+
+#     return jsonify(response), 201
+    
+
+@app.route('/discover', methods=["GET"])
+def discover():
+    nodes = chain.discover_nodes(port)
+    
+    return jsonify(nodes), 200
+
 
 @app.route('/replace', methods=["GET"])
 def replace_chain():
