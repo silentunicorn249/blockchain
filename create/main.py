@@ -72,21 +72,7 @@ def add_node():
     }
 
     return jsonify(response), 201
-
-# @app.route('/discover', methods=["POST"])
-# def discover():
-#     json = request.get_json()
-#     sender = json.get('sender')
-    
-#     nodes = chain.discover_nodes(sender)
-    
-#     response = {
-#         "message": "Success",
-#         "nodes": list(nodes)
-#     }
-
-#     return jsonify(response), 201
-    
+  
 
 @app.route('/discover', methods=["GET"])
 def discover():
@@ -99,7 +85,7 @@ def discover():
 def replace_chain():
     is_chain_replaced = chain.replace_chain()
     if is_chain_replaced:
-        response = {'message': 'There is a bigger chain',
+        response = {'message': 'Different',
                     'chain': chain.chain}
     else:
         response = {'message': 'Longest chain',

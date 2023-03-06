@@ -36,7 +36,7 @@ class Blockchain:
         self.chain.append(block)
         self.transactions = []
         self.notify_nodes()
-        # print(block)
+
         return block
 
     def notify_nodes(self):
@@ -77,7 +77,6 @@ class Blockchain:
                     nodes.append(i)
         return traversed
 
-
     def add_node(self, address: str):
         print(f"{address}")
         if urlparse(address).netloc not in self.nodes:
@@ -103,10 +102,10 @@ class Blockchain:
                 if response.status_code == 200:
                     result = response.json()
                     chain = result["chain"]
-                    # print(chain)
+
                     length = result["length"]
                     valid = self.is_chain_valid(chain)
-                    # print(length, max_length, valid )
+
                     if length > max_length and valid:
                         print(f"Found chain at {node}")
                         longest_chain = chain
@@ -130,12 +129,13 @@ class Blockchain:
 
     def proof_of_work(self, prev_proof) -> str:
         new_proof = 1
+        validate = "0"*self.pow
         while True:
             hash_op = hashlib.sha256(
                 str(new_proof**2 - prev_proof**2).encode()).hexdigest()
-            # print("Trying: ", hash_op)
-            if hash_op[:self.pow] == "0"*self.pow:
-                # print(f"Found: {hash_op} with nonce: {new_proof}")
+
+            if hash_op[:self.pow] == validate:
+
                 return new_proof
             new_proof += 1
 
